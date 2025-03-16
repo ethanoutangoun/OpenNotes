@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.opennotes.ui.theme.OpenNotesTheme
 
 @Composable
 fun NoteApp() {
@@ -23,6 +24,8 @@ fun NoteApp() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewMainScreen() {
-    NoteApp()
+fun PreviewNoteApp() {
+    OpenNotesTheme { // Ensure the theme is applied in preview
+        NoteApp()
+    }
 }

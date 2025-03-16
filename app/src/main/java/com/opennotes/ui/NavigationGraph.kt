@@ -1,15 +1,36 @@
 package com.opennotes.ui
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.contentColorFor
+import com.opennotes.ui.theme.BlueSelected
+import com.opennotes.ui.theme.GrayBackground
+import com.opennotes.ui.theme.BlackUnselected
+import com.opennotes.ui.theme.OpenNotesTheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import com.opennotes.ui.theme.BackgroundColor
+import com.opennotes.ui.theme.BorderColor
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -101,7 +122,7 @@ fun NavigationGraph(navController: NavHostController) {
                 }
             }
         ) {
-            NoteListScreen()
+            NoteListScreen(viewModel = NotesViewModel())
         }
 
         composable(
@@ -138,22 +159,66 @@ fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf("Welcome", "Query", "Notes", "Settings")
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = BackgroundColor,
+        modifier = Modifier.border(
+            BorderStroke(1.dp, BorderColor)
+        )
+    ) {
         items.forEach { screen ->
+            val isSelected = currentRoute == screen
+            val itemColor = if (isSelected) BlueSelected else BlackUnselected
+
             NavigationBarItem(
-                selected = currentRoute == screen,
+                selected = isSelected,
                 onClick = {
                     if (currentRoute != screen) {
                         navController.navigate(screen) {
-                            // avoid duplicate destinations
                             launchSingleTop = true
                         }
                     }
                 },
-                label = { Text(screen) },
+                label = {
+                    Text(
+                        text = screen,
+                        color = itemColor
+                    )
+                },
                 alwaysShowLabel = true,
-                icon = {} // add icons here if we want
+                icon = {
+                    Icon(
+                        imageVector = when (screen) {
+                            "Welcome" -> Icons.Filled.Edit
+                            "Query" -> Icons.Filled.Chat
+                            "Notes" -> Icons.Filled.List
+                            "Settings" -> Icons.Filled.Settings
+                            else -> Icons.Filled.Home
+                        },
+                        contentDescription = null,
+                        tint = itemColor
+                    )
+                },
+                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                    selectedIconColor = itemColor,
+                    unselectedIconColor = itemColor,
+                    selectedTextColor = itemColor,
+                    unselectedTextColor = itemColor,
+                    indicatorColor = Color.Transparent
+                )
             )
         }
+    }
+}
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun BottomNavigationBarPreview() {
+    // Use rememberNavController for the preview
+    val navController = rememberNavController()
+    // Wrap the preview with your custom theme
+    OpenNotesTheme {
+        BottomNavigationBar(navController = navController)
     }
 }
