@@ -97,7 +97,7 @@ fun NavigationGraph(navController: NavHostController) {
                 }
             }
         ) {
-            QueryScreen()
+            QueryScreen(viewModel = notesViewModel)
         }
 
         composable(

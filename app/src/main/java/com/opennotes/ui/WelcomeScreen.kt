@@ -30,7 +30,7 @@ fun WelcomeScreen(notesViewModel: NotesViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Welcome ✏️ to Open Notes!",
+            text = "Welcome to Open Notes ✏️",
             fontSize = 24.sp
         )
 
