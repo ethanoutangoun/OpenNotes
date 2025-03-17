@@ -2,7 +2,7 @@ package com.opennotes.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
-import com.opennotes.data.SimpleNoteClassifier
+import com.opennotes.data.Model
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import android.util.Log
@@ -10,8 +10,9 @@ import com.opennotes.BuildConfig
 
 class NotesViewModel : ViewModel() {
 
-    private val classifier = SimpleNoteClassifier()
+    private val model = Model()
     private val apiKey = BuildConfig.OPENAI_API_KEY
+
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -49,7 +50,7 @@ class NotesViewModel : ViewModel() {
         Log.d("NotesViewModel", "Adding note: $content")
 
         try {
-            val (categoryName, categoryColor) = classifier.categorizeSingleNote(
+            val (categoryName, categoryColor) = model.categorizeSingleNote(
                 apiKey = apiKey,
                 noteContent = content,
                 existingCategories = _categories.value
@@ -94,5 +95,9 @@ class NotesViewModel : ViewModel() {
         val currentCategories = _categories.value.toMutableList()
         currentCategories.add(category)
         _categories.value = currentCategories
+    }
+
+    suspend fun queryNotes(query: String){
+
     }
 }

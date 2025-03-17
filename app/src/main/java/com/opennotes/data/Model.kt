@@ -38,7 +38,7 @@ data class Choice(
     val message: Message
 )
 
-class SimpleNoteClassifier {
+class Model {
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://api.openai.com/")
         .addConverterFactory(GsonConverterFactory.create())
