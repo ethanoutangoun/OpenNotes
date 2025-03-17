@@ -77,11 +77,3 @@ fun WelcomeScreen(notesViewModel: NotesViewModel) {
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun WelcomeScreenPreview() {
-    OpenNotesTheme {
-        WelcomeScreen(notesViewModel = NotesViewModel())
-    }
-}

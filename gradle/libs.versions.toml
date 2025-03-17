@@ -17,10 +17,12 @@ retrofit = "2.9.0"
 gson = "2.10.1"
 coroutines = "1.7.3"
 lifecycleRuntimeComposeAndroid = "2.8.7"
+roomKtx = "2.6.1"
 roomRuntime = "2.6.1"
 roomCompiler = "2.6.1"
 
 [libraries]
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
@@ -53,4 +55,6 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+
 

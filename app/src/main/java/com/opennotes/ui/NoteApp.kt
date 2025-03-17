@@ -10,22 +10,14 @@ import androidx.navigation.compose.rememberNavController
 import com.opennotes.ui.theme.OpenNotesTheme
 
 @Composable
-fun NoteApp() {
+fun NoteApp(viewModel: NotesViewModel) {
     val navController = rememberNavController()
 
     Scaffold(
         bottomBar = { BottomNavigationBar(navController) }
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            NavigationGraph(navController)
+            NavigationGraph(navController, viewModel)
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewNoteApp() {
-    OpenNotesTheme { // Ensure the theme is applied in preview
-        NoteApp()
     }
 }

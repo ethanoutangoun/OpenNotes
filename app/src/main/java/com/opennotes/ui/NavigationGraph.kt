@@ -35,9 +35,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun NavigationGraph(navController: NavHostController) {
+fun NavigationGraph(navController: NavHostController, notesViewModel: NotesViewModel) {
     val screenOrder = listOf("Welcome", "Query", "Notes", "Settings")
-    val notesViewModel: NotesViewModel = viewModel()
 
 
     AnimatedNavHost(

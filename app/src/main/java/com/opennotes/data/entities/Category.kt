@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "categories")
 data class Category(
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     val id: String,
     val name: String,
     val colorHex: String
