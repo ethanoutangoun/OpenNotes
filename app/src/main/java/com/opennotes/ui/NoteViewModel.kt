@@ -2,10 +2,17 @@ package com.opennotes.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
+import com.opennotes.data.SimpleNoteClassifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import android.util.Log
+import com.opennotes.BuildConfig
 
 class NotesViewModel : ViewModel() {
+
+    private val classifier = SimpleNoteClassifier()
+    private val apiKey = BuildConfig.OPENAI_API_KEY
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
@@ -31,9 +38,61 @@ class NotesViewModel : ViewModel() {
             Note("8", "Travel Plans", "Book flights for vacation...", "1")
         )
     )
-    val notes: StateFlow<List<Note>> = _notes
+    val notes: StateFlow<List<Note>> get() = _notes
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    suspend fun addNote(content: String) {
+        // Log that the function is being called
+        Log.d("NotesViewModel", "Adding note: $content")
+
+        try {
+            val (categoryName, categoryColor) = classifier.categorizeSingleNote(
+                apiKey = apiKey,
+                noteContent = content,
+                existingCategories = _categories.value
+            )
+
+            // Log the API response
+            Log.d("NotesViewModel", "API Response - Category: $categoryName, Color: $categoryColor")
+
+            var categoryId = _categories.value.find { it.name == categoryName }?.id
+
+            if (categoryId == null) {
+                val colorInt = categoryColor.toLong(16).toInt()
+                val newCategoryId = java.util.UUID.randomUUID().toString()
+                val newCategory = Category(newCategoryId, categoryName, Color(colorInt))
+
+                addCategory(newCategory)
+                categoryId = newCategoryId
+
+                Log.d("NotesViewModel", "New category added: $categoryName with ID: $categoryId")
+            }
+
+            val newNote = Note(java.util.UUID.randomUUID().toString(), content, content, categoryId, false)
+
+            _notes.value += newNote
+
+            Log.d("NotesViewModel", "Note added successfully: ${newNote.id}")
+            Log.d("NotesViewModel", "Notes after adding: ${_notes.value}")
+
+        } catch (e: Exception) {
+            Log.e("NotesViewModel", "Error while categorizing note", e)
+        }
+
+        return
+    }
+
+    fun deleteNote(noteId: String) {
+        _notes.value = _notes.value.filter { it.id != noteId }
+    }
+
+    // Similar functions for categories
+    fun addCategory(category: Category) {
+        val currentCategories = _categories.value.toMutableList()
+        currentCategories.add(category)
+        _categories.value = currentCategories
     }
 }

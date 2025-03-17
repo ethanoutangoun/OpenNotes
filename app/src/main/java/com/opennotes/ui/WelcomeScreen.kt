@@ -3,6 +3,7 @@ package com.opennotes.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,10 +15,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Color
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.OpenNotesTheme
+import kotlinx.coroutines.launch
 
 @Composable
-fun WelcomeScreen() {
+fun WelcomeScreen(notesViewModel: NotesViewModel) {
     var text by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -37,15 +40,41 @@ fun WelcomeScreen() {
         BasicTextField(
             value = text,
             onValueChange = { text = it },
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier
+                .padding(8.dp)
+                .width(280.dp)
+                .height(120.dp),
             textStyle = TextStyle(fontSize = 18.sp, color = Color.Black),
             decorationBox = { innerTextField ->
-                if (text.isEmpty()) {
-                    Text("Enter notes...", fontSize = 18.sp, color = Color.Gray)
+                Box(
+                    modifier = Modifier
+                        .background(Color.White)
+                        .padding(8.dp)
+                ) {
+                    if (text.isEmpty()) {
+                        Text("Enter notes...", fontSize = 18.sp, color = Color.Gray)
+                    }
+                    innerTextField()
                 }
-                innerTextField()
             }
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Save button
+        Button(
+            onClick = {
+                if (text.isNotEmpty()) {
+                    coroutineScope.launch {
+                        notesViewModel.addNote(text)
+                        text = "" // Clear the text field after saving
+                    }
+                }
+            },
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text("Save Note")
+        }
     }
 }
 
@@ -53,6 +82,6 @@ fun WelcomeScreen() {
 @Composable
 fun WelcomeScreenPreview() {
     OpenNotesTheme {
-        WelcomeScreen()
+        WelcomeScreen(notesViewModel = NotesViewModel())
     }
 }

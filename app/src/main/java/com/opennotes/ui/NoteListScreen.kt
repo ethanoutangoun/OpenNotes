@@ -1,5 +1,6 @@
 package com.opennotes.ui
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -51,7 +52,7 @@ fun NoteListScreen(viewModel: NotesViewModel) {
     val notes by viewModel.notes.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val expandedCategories = remember { mutableStateMapOf<String, Boolean>() }
-
+    Log.d("NotesUI", "Notes in UI: ${notes.size}")
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -31,11 +31,14 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.BorderColor
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NavigationGraph(navController: NavHostController) {
     val screenOrder = listOf("Welcome", "Query", "Notes", "Settings")
+    val notesViewModel: NotesViewModel = viewModel()
+
 
     AnimatedNavHost(
         navController = navController,
@@ -66,7 +69,7 @@ fun NavigationGraph(navController: NavHostController) {
                 }
             }
         ) {
-            WelcomeScreen()
+            WelcomeScreen(notesViewModel = notesViewModel)
         }
 
         composable(
@@ -122,7 +125,7 @@ fun NavigationGraph(navController: NavHostController) {
                 }
             }
         ) {
-            NoteListScreen(viewModel = NotesViewModel())
+            NoteListScreen(viewModel = notesViewModel)
         }
 
         composable(
@@ -149,10 +152,12 @@ fun NavigationGraph(navController: NavHostController) {
                             fadeOut(animationSpec = tween(300))
                 }
             }
-        ) { SettingsScreen()
+        ) {
+            SettingsScreen()
         }
     }
 }
+
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {

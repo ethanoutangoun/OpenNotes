@@ -8,14 +8,19 @@ android {
     namespace = "com.opennotes"
     compileSdk = 35
 
+
+    buildFeatures {
+        buildConfig = true  // Enable BuildConfig generation
+    }
+
     defaultConfig {
         applicationId = "com.opennotes"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "OPENAI_API_KEY", "\"${System.getenv("OPENAI_API_KEY") ?: ""}\"")
     }
 
     buildTypes {
@@ -40,6 +45,15 @@ android {
 }
 
 dependencies {
+    // Retrofit
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+
+    // Gson
+    implementation(libs.gson)
+
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -54,11 +68,13 @@ dependencies {
     implementation(libs.androidx.material3.icons)
     implementation(libs.accompanist.navigation.animation)
     implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.androidx.room.runtime)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    annotationProcessor(libs.androidx.room.compiler)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
