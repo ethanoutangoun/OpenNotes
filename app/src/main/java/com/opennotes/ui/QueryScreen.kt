@@ -32,6 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import com.opennotes.R
 import com.opennotes.ui.theme.BackgroundColor
+import com.opennotes.ui.theme.DarkBackgroundColor
 import com.opennotes.ui.theme.LightGray
 import kotlinx.coroutines.launch
 
@@ -40,7 +41,19 @@ import kotlinx.coroutines.launch
 fun QueryScreen(viewModel: NotesViewModel) {
     val queryInput by viewModel.queryInput.collectAsState()
     val queryResult by viewModel.queryResult.collectAsState()
+    val isDarkMode = viewModel.isDarkMode.value
+
+    // Theme-aware colors
+    val backgroundColor = if (isDarkMode) DarkBackgroundColor else BackgroundColor
+    val textColor = if (isDarkMode) Color.White else Color.Black
+    val searchFieldColor = if (isDarkMode) Color.DarkGray else LightGray
+    val placeholderColor = if (isDarkMode) Color.LightGray else Color.Gray
+    val resultBackgroundColor = if (isDarkMode) Color(0xFF2D2D2D) else Color(0xFFF6F6F6)
+    val resultTextColor = if (isDarkMode) Color.White else Color.Black
+    val noResultsTextColor = if (isDarkMode) Color.LightGray else Color.Gray
+    val iconTint = if (isDarkMode) Color.LightGray else Color.DarkGray
     val keyboardController = LocalSoftwareKeyboardController.current
+
 
     // State to track if search has been triggered
     var isSearching by remember { mutableStateOf(false) }
@@ -63,7 +76,7 @@ fun QueryScreen(viewModel: NotesViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundColor)
+            .background(backgroundColor)
             .padding(16.dp)
     ) {
         // Search Bar with keyboard actions
@@ -74,15 +87,18 @@ fun QueryScreen(viewModel: NotesViewModel) {
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(28.dp)),
-            placeholder = { Text("Search notes...") },
+            placeholder = { Text("Search notes...", color = placeholderColor) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search Icon"
+                    contentDescription = "Search Icon",
+                    tint = iconTint
                 )
             },
             colors = TextFieldDefaults.textFieldColors(
-                containerColor = LightGray,
+                containerColor = searchFieldColor,
+                cursorColor = textColor,
+                focusedTextColor = resultTextColor,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
@@ -102,6 +118,12 @@ fun QueryScreen(viewModel: NotesViewModel) {
             onClick = { performSearch() },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isDarkMode) Color.DarkGray else MaterialTheme.colorScheme.primary,
+                contentColor = if (isDarkMode) Color.White else Color.White,
+                disabledContainerColor = if (isDarkMode) Color(0xFF1A1A1A) else Color.LightGray,
+                disabledContentColor = if (isDarkMode) Color.Gray else Color.DarkGray
+            ),
             enabled = queryInput.isNotEmpty() && !isSearching
         ) {
             Text(text = "Search")
@@ -111,6 +133,16 @@ fun QueryScreen(viewModel: NotesViewModel) {
 
         // Show loading indicator while searching
         if (isSearching) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .wrapContentSize(Alignment.Center)
+            ) {
+                CircularProgressIndicator(
+                    color = if (isDarkMode) Color.White else MaterialTheme.colorScheme.primary
+                )
+            }
             FloatingRobotEmptyState()
         } else {
             // Display query result
@@ -118,14 +150,14 @@ fun QueryScreen(viewModel: NotesViewModel) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFF6F6F6), RoundedCornerShape(8.dp))
+                        .background(resultBackgroundColor, RoundedCornerShape(8.dp))
                         .padding(16.dp)
                 ) {
                     Text(
                         text = queryResult,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Normal,
-                        color = Color.Black
+                        color = resultTextColor
                     )
                 }
             }
