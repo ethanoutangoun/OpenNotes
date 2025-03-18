@@ -1,6 +1,7 @@
 package com.opennotes.ui
 
 import android.app.Application
+import android.os.Build
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,25 +11,46 @@ import com.opennotes.data.entities.Category as RoomCategory
 import com.opennotes.data.entities.Note as RoomNote
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.util.Date
 import java.util.UUID
+import com.google.gson.JsonParser
+import java.text.SimpleDateFormat
+import java.util.Locale
 
+fun getCurrentDateFormatted(): String {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) // Customize pattern as needed
+    return dateFormat.format(java.util.Date())
+}
+
+data class Note(
+    val id: String,
+    val title: String,
+    val content: String,
+    val categoryId: String,
+    val creationDate: String,
+    val isPinned: Boolean = false
+)
+
+data class Category(
+    val id: String,
+    val name: String,
+    val color: Color
+)
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
-
     private val model = Model()
-    private val apiKey = KEY_HERE
+    private val apiKey = ""
 
     // Database access
     private val database = DatabaseHelper.getDatabase(application)
@@ -46,6 +68,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _queryResult = MutableStateFlow("")
     val queryResult: StateFlow<String> = _queryResult
 
+
+
     // Initial dummy data - will implement DB loading later
     private val _categories = MutableStateFlow(
         listOf(
@@ -56,19 +80,21 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _notes = MutableStateFlow(
         listOf(
-            Note("1", "Shopping List", "Milk, eggs, bread...", "1", true),
+            Note("1", "Shopping List", "Milk, eggs, bread...", "1", getCurrentDateFormatted(),true),
         )
     )
     val notes: StateFlow<List<Note>> get() = _notes
 
     // Initialize database if needed
     init {
-        viewModelScope.launch {
-            // Load data sequentially
+
+        viewModelScope.launch(Dispatchers.IO) {
             loadCategoriesFromDb()
             loadNotesFromDb()
         }
     }
+
+
 
     private suspend fun loadCategoriesFromDb() {
         withContext(Dispatchers.IO) {
@@ -79,12 +105,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 if (roomCategories.isNotEmpty()) {
                     val uiCategories = roomCategories.map { roomCategory  ->
                         // Convert hex color string to Color
-                        Log.d("NoteViewModel", roomCategory.colorHex.substring(0, 9))
                         val colorInt = try {
                             android.graphics.Color.parseColor(roomCategory.colorHex.substring(0, 9))
                         } catch (e: Exception) {
                             0xFF2196F3.toInt() // Default blue if parsing fails
-                            Log.d("NoteViewModel", "parsing failed")
                         }
 
                         Category(
@@ -113,42 +137,45 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     private suspend fun loadNotesFromDb() {
-        withContext(Dispatchers.IO) {
-            try {
-                // Collect all notes at once
-                val roomNotes = noteDao.getAllNotes().first()
 
-                if (roomNotes.isNotEmpty()) {
-                    val uiNotes = roomNotes.map { roomNote ->
-                        // Extract title from content (first line or first 30 chars)
-                        val title = roomNote.content.split("\n").firstOrNull() ?:
-                        if (roomNote.content.length > 30)
-                            roomNote.content.substring(0, 30) + "..."
-                        else
-                            roomNote.content
+        try {
+            val roomNotes = noteDao.getAllNotes().stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                emptyList()
+            ).value
 
-                        Note(
-                            id = roomNote.id,
-                            title = title,
-                            content = roomNote.content,
-                            categoryId = roomNote.categoryId,
-                            isPinned = false // You might want to add this to your Room entity
-                        )
-                    }
-                    _notes.value = uiNotes
-                    Log.d("NotesViewModel", "Loaded ${uiNotes.size} notes from database")
-                } else {
-                    // DB is empty, save our initial data to DB
-                    _notes.value.forEach { note ->
-                        val roomNote = RoomNote(
-                            id = note.id,
-                            content = note.content,
-                            categoryId = note.categoryId
-                        )
-                        noteDao.insertNote(roomNote)
-                    }
-                    Log.d("NotesViewModel", "Initialized notes in database")
+            if (roomNotes.isNotEmpty()) {
+                val uiNotes = roomNotes.map { roomNote ->
+                    // Extract title from content (first line or first 30 chars)
+                    val title = roomNote.content.split("\n").firstOrNull() ?:
+                    if (roomNote.content.length > 30)
+                        roomNote.content.substring(0, 30) + "..."
+                    else
+                        roomNote.content
+
+
+
+                    Note(
+                        id = roomNote.id,
+                        title = title,
+                        content = roomNote.content,
+                        creationDate = getCurrentDateFormatted(),
+                        categoryId = roomNote.categoryId.toString(),
+                    )
+                }
+                _notes.value = uiNotes
+            } else {
+                // DB is empty, save our initial data to DB
+                _notes.value.forEach { note ->
+                    val roomNote = RoomNote(
+                        id = note.id,
+                        content = note.content,
+                        categoryId = note.categoryId
+                    )
+                    noteDao.insertNote(roomNote)
                 }
             } catch (e: Exception) {
                 Log.e("NotesViewModel", "Error loading notes from DB", e)
@@ -159,51 +186,47 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
 
-        // Also update the filtered notes based on search query
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (query.isNotEmpty()) {
-                    val searchResults = noteDao.searchNotes("%$query%").stateIn(
-                        viewModelScope,
-                        SharingStarted.Eagerly,
-                        emptyList()
-                    ).value
 
-                    val uiResults = searchResults.map { roomNote ->
-                        val title = roomNote.content.split("\n").firstOrNull() ?:
-                        if (roomNote.content.length > 30)
-                            roomNote.content.substring(0, 30) + "..."
-                        else
-                            roomNote.content
 
-                        Note(
-                            id = roomNote.id,
-                            title = title,
-                            content = roomNote.content,
-                            categoryId = roomNote.categoryId.toString()
-                        )
-                    }
-                    _notes.value = uiResults
-                } else {
-                    // If empty query, load all notes
-                    loadNotesFromDb()
-                }
-            } catch (e: Exception) {
-                Log.e("NotesViewModel", "Error searching notes", e)
-            }
-        }
+//        Whenever I type, it deletes all notes so I removed below logic, not sure what this is doing
+
+//        // Also update the filtered notes based on search query
+//        viewModelScope.launch(Dispatchers.IO) {
+//            try {
+//                if (query.isNotEmpty()) {
+//                    val searchResults = noteDao.searchNotes("%$query%").stateIn(
+//                        viewModelScope,
+//                        SharingStarted.Eagerly,
+//                        emptyList()
+//                    ).value
+//
+//                    val uiResults = searchResults.map { roomNote ->
+//                        val title = roomNote.content.split("\n").firstOrNull() ?:
+//                        if (roomNote.content.length > 30)
+//                            roomNote.content.substring(0, 30) + "..."
+//                        else
+//                            roomNote.content
+//
+//                        Note(
+//                            id = roomNote.id,
+//                            title = title,
+//                            content = roomNote.content,
+//                            categoryId = roomNote.categoryId.toString()
+//                        )
+//                    }
+//                    _notes.value = uiResults
+//                } else {
+//                    // If empty query, load all notes
+//                    loadNotesFromDb()
+//                }
+//            } catch (e: Exception) {
+//                Log.e("NotesViewModel", "Error searching notes", e)
+//            }
+//        }
     }
 
     fun updateQueryInput(query: String){
         _queryInput.value = query
-    }
-
-    fun String.removePrefix(prefix: String): String {
-        return if (this.startsWith(prefix)) {
-            this.substring(prefix.length)
-        } else {
-            this
-        }
     }
 
     suspend fun addNote(content: String) {
@@ -250,8 +273,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             val title = content.split("\n").firstOrNull() ?:
             if (content.length > 30) content.substring(0, 30) + "..." else content
 
+
+
             // Add to UI state
-            val newUiNote = Note(newNoteId, title, content, categoryId, false)
+            val newUiNote = Note(newNoteId, title, content, categoryId, getCurrentDateFormatted(),false)
             _notes.value += newUiNote
 
             // Add to database
@@ -294,6 +319,30 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleNotePin(noteId: String) {
+        _notes.value = _notes.value.map { note ->
+            if (note.id == noteId) note.copy(isPinned = !note.isPinned) else note
+        }
+//
+//        viewModelScope.launch(Dispatchers.IO) {
+//            try {
+//                val noteToUpdate = noteDao.getAllNotes().stateIn(
+//                    viewModelScope,
+//                    SharingStarted.Eagerly,
+//                    emptyList()
+//                ).value.find { it.id == noteId }
+//
+//
+//                noteToUpdate?.let {
+//                    noteDao.updateNote(it.copy(isPinned = !it.isPinned))
+//                    Log.d("NotesViewModel", "Note pin toggled: $noteId")
+//                }
+//            } catch (e: Exception) {
+//                Log.e("NotesViewModel", "Error toggling note pin", e)
+//            }
+//        }
+    }
+
     // Similar functions for categories
     fun addCategory(category: Category) {
         // Add to UI state
@@ -318,14 +367,63 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun queryNotes(query: String) {
-        val noteContext = _notes.value.joinToString(" ") { it.content }
+        val noteContext = notes.value.joinToString(" ") {
+            "({id: ${it.id}, title: ${it.title}, content: ${it.content}, categoryId: ${it.categoryId}}, creationDate: ${it.creationDate})"
+        }
+        Log.d("NotesViewModel", noteContext)
 
         try {
             // Call the model to query the notes
-            val result = model.queryWithContext(apiKey, query, noteContext)
+            var result = model.queryWithContext(apiKey, query, noteContext)
+            var response = result["response"]
+            val functionCall = result["type"] == "function"
 
-            // Update the query result in MutableStateFlow
-            _queryResult.value = result
+            // Check if function call occurs
+            if (functionCall) {
+                // If it's a function call, you have the function name and parameters
+                val functionName = result["function_name"] as String
+                val arguments = result["params"]
+
+                Log.d("FunctionCall", "Function Name: $functionName")
+                Log.d("FunctionCall", "Arguments: $arguments")
+
+                val jsonObject = try {
+                    JsonParser.parseString(arguments.toString()).asJsonObject
+                } catch (e: Exception) {
+                    Log.e("FunctionCall", "Error parsing arguments: $e")
+                    null
+                }
+
+                jsonObject?.let {
+                    when (functionName) {
+                        "delete_notes" -> {
+                            try {
+                                // Get the array of note IDs
+                                val noteIdsArray = it.getAsJsonArray("note_ids")
+
+                                // Process each note ID in the array
+                                noteIdsArray.forEach { noteIdElement ->
+                                    val noteId = noteIdElement.asString
+                                    // Delete each note
+                                    deleteNote(noteId)
+                                    Log.d("FunctionCall", "Deleting note with ID: $noteId")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("FunctionCall", "Error extracting note_ids: $e")
+                            }
+                        }
+                        // Handle other function cases
+                        else -> {
+                            Log.d("FunctionCall", "Unknown function: $functionName")
+                        }
+                    }
+                }
+
+                response = model.queryPostFunction(apiKey, response.toString(), query)
+            }
+
+            // Update the response
+            _queryResult.value = response.toString()
 
             Log.d("NotesViewModel", "Query Result: $result")
 
@@ -359,4 +457,5 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleDarkMode() {
         isDarkMode.value = !isDarkMode.value
     }
+
 }

@@ -1,7 +1,9 @@
 package com.opennotes.data
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import com.opennotes.ui.Category
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
@@ -23,12 +25,25 @@ interface OpenAIService {
 data class ChatRequest(
     val model: String = "gpt-4o",
     val messages: List<Message>,
-    val temperature: Double = 0.5
+    val functions: List<FunctionDefinition>? = null,
+    val temperature: Double = 0.01
+)
+
+data class FunctionDefinition(
+    val name: String,
+    val description: String,
+    val parameters: Map<String, Any>
 )
 
 data class Message(
     val role: String,
-    val content: String
+    val content: String?,
+    val function_call: FunctionCall? = null
+)
+
+data class FunctionCall(
+    val name: String,
+    val arguments: String
 )
 
 data class ChatResponse(
@@ -40,6 +55,28 @@ data class Choice(
 )
 
 class Model {
+
+    private fun createDeleteNoteFunction(): FunctionDefinition {
+        return FunctionDefinition(
+            name = "delete_notes",
+            description = "Delete multiple notes by providing a list of IDs",
+            parameters = mapOf(
+                "type" to "object",
+                "properties" to mapOf(
+                    "note_ids" to mapOf(
+                        "type" to "array",
+                        "description" to "An array of note IDs to delete",
+                        "items" to mapOf(
+                            "type" to "string"
+                        )
+                    )
+                ),
+                "required" to listOf("note_ids")
+            )
+        )
+    }
+
+
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://api.openai.com/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -61,7 +98,6 @@ class Model {
         }
 
         val prompt = """
-            
             Existing categories: $categoriesText
                     
             Note Content: $noteContent
@@ -84,7 +120,7 @@ class Model {
         )
 
         val response = service.getChatCompletion("Bearer $apiKey", request)
-        val answer = response.choices.first().message.content.trim()
+        val answer = response.choices.first().message.content?.trim() ?: ""
 
         // Use existing category
         val parts = answer.split(" ")
@@ -117,19 +153,22 @@ class Model {
         }
     }
 
-    suspend fun queryWithContext(
+    suspend fun queryPostFunction(
         apiKey: String,
         query: String,
-        noteContext: String
+        context: String
     ): String = withContext(Dispatchers.IO) {
-        // Create a prompt for the query along with the provided note context
+        // Create a simplified prompt without note context
         val prompt = """
-        You are a helpful assistant designed to help users efficiently query their saved notes. Return answers in a concise and useful format.
-        Here is some context about a note: 
-        $noteContext
-        
-        Based on this context, answer the following query:
-        $query
+    You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
+    
+    Here is context to the conversation:
+    $context
+   
+    This function has just been executed: 
+    $query
+    
+    Let the user know their operation succeeded.
     """.trimIndent()
 
         val request = ChatRequest(
@@ -141,9 +180,62 @@ class Model {
 
         // Get the response from OpenAI API
         val response = service.getChatCompletion("Bearer $apiKey", request)
-        val answer = response.choices.first().message.content.trim()
+        val responseMessage = response.choices.first().message
 
-        // Return the answer
-        answer
+        // Simply return the content as a string
+        responseMessage.content?.trim() ?: "No response content"
+    }
+
+    suspend fun queryWithContext(
+        apiKey: String,
+        query: String,
+        noteContext: String
+    ): Map<String, Any> = withContext(Dispatchers.IO) {
+        // Create a prompt for the query along with the provided note context
+        val prompt = """
+    You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
+    You will receive context on the user's notes, use the contents of the notes to provide helpful answers.
+    If the user wants to delete notes, call the 'delete_notes' function with the correct note IDs. 
+    Ensure you only delete notes that exactly fit their request, otherwise do not call "delete_notes".
+    Otherwise, answer normally.
+    For deletion requests, include all relevant note IDs that should be deleted based on the user's query.
+    Return answers in a concise and useful format, in plaintext not markdown.
+    
+    Here is the context for the user's notes: 
+    $noteContext
+    
+    Based on this context, answer the following query:
+    $query
+    """.trimIndent()
+
+        val request = ChatRequest(
+            messages = listOf(
+                Message("system", "You are a helpful assistant."),
+                Message("user", prompt)
+            ),
+            functions = listOf(createDeleteNoteFunction())
+        )
+
+        // Get the response from OpenAI API
+        val response = service.getChatCompletion("Bearer $apiKey", request)
+        val responseMessage = response.choices.first().message
+
+
+        // Check if we have a function call
+        return@withContext if (responseMessage.function_call != null) {
+            // Function call detected, return function name and arguments
+            mapOf(
+                "response" to "Function call: ${responseMessage.function_call.name} with arguments: ${responseMessage.function_call.arguments}",
+                "type" to "function",
+                "function_name" to responseMessage.function_call.name,
+                "params" to responseMessage.function_call.arguments
+            )
+        } else {
+            // Regular message response
+            mapOf(
+                "response" to (responseMessage.content?.trim() ?: "No response content"),
+                "type" to "message"
+            )
+        }
     }
 }

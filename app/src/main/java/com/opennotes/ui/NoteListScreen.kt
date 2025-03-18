@@ -8,13 +8,16 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -26,24 +29,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.DarkBackgroundColor
+import com.opennotes.ui.theme.BlackUnselected
 import com.opennotes.ui.theme.LightGray
-
-// Data models
-data class Note(
-    val id: String,
-    val title: String,
-    val content: String,
-    val categoryId: String,
-    val isPinned: Boolean = false
-)
-
-data class Category(
-    val id: String,
-    val name: String,
-    val color: Color
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +56,7 @@ fun NoteListScreen(viewModel: NotesViewModel) {
     val noteContentColor = if (isDarkMode) Color.LightGray else Color.Gray
     val iconTint = if (isDarkMode) Color.LightGray else Color.DarkGray
 
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -75,7 +66,7 @@ fun NoteListScreen(viewModel: NotesViewModel) {
         // Search Bar
         TextField(
             value = searchQuery,
-            onValueChange = { viewModel.updateSearchQuery(it) }, // Use ViewModel function
+            onValueChange = { viewModel.updateSearchQuery(it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
@@ -120,7 +111,13 @@ fun NoteListScreen(viewModel: NotesViewModel) {
 
                 items(pinnedNotes) { note ->
                     val category = categories.find { it.id == note.categoryId }
-                    NoteCard(note, category?.color ?: Color.Gray, isDarkMode, cardBackgroundColor, noteContentColor)
+                    NoteCard(note, 
+                             category?.color ?: Color.Gray, 
+                             isDarkMode, cardBackgroundColor, 
+                             noteContentColor, 
+                             onPin = { viewModel.toggleNotePin(it.id) },
+                             onDelete = { viewModel.deleteNote(it.id) })
+
                 }
 
                 item {
@@ -169,7 +166,13 @@ fun NoteListScreen(viewModel: NotesViewModel) {
 
                     if (expandedCategories[category.id] == true) {
                         items(categoryNotes) { note ->
-                            NoteCard(note, category.color, isDarkMode, cardBackgroundColor, noteContentColor)
+                            NoteCard(note, 
+                                     category.color, 
+                                     isDarkMode, 
+                                     cardBackgroundColor, 
+                                     noteContentColor, 
+                                     onPin = { viewModel.toggleNotePin(it.id) },
+                                     onDelete = { viewModel.deleteNote(it.id) })
                         }
                     }
                 }
@@ -177,7 +180,6 @@ fun NoteListScreen(viewModel: NotesViewModel) {
         }
     }
 }
-
 @Composable
 fun CategoryHeader(
     category: Category,
@@ -207,6 +209,7 @@ fun CategoryHeader(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun NoteCard(
     note: Note,
@@ -214,8 +217,11 @@ fun NoteCard(
     isDarkMode: Boolean,
     cardBackgroundColor: Color,
     noteContentColor: Color
+    onPin: (Note) -> Unit,  // Add callback for pin action
+    onDelete: (Note) -> Unit  // Add callback for delete action
 ) {
     val visibleState = remember(note.id) { MutableTransitionState(false) }
+    var showDialog by remember { mutableStateOf(false) }
 
     // Start the animation once per note ID
     LaunchedEffect(note.id) {
@@ -230,7 +236,11 @@ fun NoteCard(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 6.dp)
+                .combinedClickable(
+                    onClick = { /* Regular click - you could navigate to note detail */ },
+                    onLongClick = { showDialog = true }  // Show dialog on long press
+                ),
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
                 containerColor = cardBackgroundColor
@@ -275,5 +285,65 @@ fun NoteCard(
                 }
             }
         }
+    }
+
+    // Long press dialog
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel", color = BlackUnselected)
+                }
+            },
+
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Pin Button
+                    TextButton(
+                        onClick = {
+                            onPin(note)
+                            showDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PushPin,
+                                contentDescription = if (note.isPinned) "Unpin" else "Pin"
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = if (note.isPinned) "Unpin" else "Pin", color = BlackUnselected)
+                        }
+                    }
+
+                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Delete Button
+                    TextButton(
+                        onClick = {
+                            onDelete(note)
+                            showDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete"
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Delete", color = BlackUnselected)
+                        }
+                    }
+                }
+            }
+        )
     }
 }

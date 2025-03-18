@@ -20,7 +20,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
+    primary = PrimaryColor,
     secondary = PurpleGrey40,
     tertiary = Pink40,
     surfaceVariant = GrayBackground, // Using GrayBackground as a surface variant

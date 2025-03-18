@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Delete
 import androidx.room.Query
+import androidx.room.Update
 import com.opennotes.data.entities.Note
 import kotlinx.coroutines.flow.Flow
 
@@ -23,4 +24,7 @@ interface NoteDao {
 
     @Query("DELETE FROM notes")
     suspend fun deleteAllNotes()
+    @Update
+    suspend fun updateNote(note: Note)
+
 }
