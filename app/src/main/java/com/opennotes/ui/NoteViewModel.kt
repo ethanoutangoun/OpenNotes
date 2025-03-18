@@ -1,6 +1,7 @@
 package com.opennotes.ui
 
 import android.app.Application
+import android.os.Build
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,23 +11,40 @@ import com.opennotes.data.entities.Category as RoomCategory
 import com.opennotes.data.entities.Note as RoomNote
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.withContext
-import java.util.Date
 import java.util.UUID
-import com.google.gson.Gson
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import java.text.SimpleDateFormat
+import java.util.Locale
 
+fun getCurrentDateFormatted(): String {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) // Customize pattern as needed
+    return dateFormat.format(java.util.Date())
+}
+
+data class Note(
+    val id: String,
+    val title: String,
+    val content: String,
+    val categoryId: String,
+    val creationDate: String,
+    val isPinned: Boolean = false
+)
+
+data class Category(
+    val id: String,
+    val name: String,
+    val color: Color
+)
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
-
     private val model = Model()
     private val apiKey = ""
 
@@ -44,6 +62,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _queryResult = MutableStateFlow("")
     val queryResult: StateFlow<String> = _queryResult
 
+
+
     // Initial dummy data - will implement DB loading later
     private val _categories = MutableStateFlow(
         listOf(
@@ -54,7 +74,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _notes = MutableStateFlow(
         listOf(
-            Note("1", "Shopping List", "Milk, eggs, bread...", "1", true),
+            Note("1", "Shopping List", "Milk, eggs, bread...", "1", getCurrentDateFormatted(),true),
         )
     )
     val notes: StateFlow<List<Note>> get() = _notes
@@ -62,11 +82,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     // Initialize database if needed
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            // Load initial data
             loadCategoriesFromDb()
             loadNotesFromDb()
         }
     }
+
+
 
     private suspend fun loadCategoriesFromDb() {
         try {
@@ -78,11 +99,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
             if (roomCategories.isNotEmpty()) {
                 val uiCategories = roomCategories.map { roomCategory ->
-                    // Convert hex color string to Color
                     val colorInt = try {
                         android.graphics.Color.parseColor(roomCategory.colorHex)
                     } catch (e: Exception) {
-                        0xFF2196F3.toInt() // Default blue if parsing fails
+                        0xFF2196F3.toInt()
                     }
 
                     Category(
@@ -108,6 +128,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     private suspend fun loadNotesFromDb() {
         try {
             val roomNotes = noteDao.getAllNotes().stateIn(
@@ -125,10 +146,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     else
                         roomNote.content
 
+
+
                     Note(
                         id = roomNote.id,
                         title = title,
                         content = roomNote.content,
+                        creationDate = getCurrentDateFormatted(),
                         categoryId = roomNote.categoryId.toString(),
                     )
                 }
@@ -239,8 +263,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             val title = content.split("\n").firstOrNull() ?:
             if (content.length > 30) content.substring(0, 30) + "..." else content
 
+
+
             // Add to UI state
-            val newUiNote = Note(newNoteId, title, content, categoryId, false)
+            val newUiNote = Note(newNoteId, title, content, categoryId, getCurrentDateFormatted(),false)
             _notes.value += newUiNote
 
             // Add to database
@@ -260,7 +286,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun deleteNote(noteId: String) {
+    fun deleteNote(noteId: String) {
         // Remove from UI state
         _notes.value = _notes.value.filter { it.id != noteId }
 
@@ -281,6 +307,30 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 Log.e("NotesViewModel", "Error deleting note from database", e)
             }
         }
+    }
+
+    fun toggleNotePin(noteId: String) {
+        _notes.value = _notes.value.map { note ->
+            if (note.id == noteId) note.copy(isPinned = !note.isPinned) else note
+        }
+//
+//        viewModelScope.launch(Dispatchers.IO) {
+//            try {
+//                val noteToUpdate = noteDao.getAllNotes().stateIn(
+//                    viewModelScope,
+//                    SharingStarted.Eagerly,
+//                    emptyList()
+//                ).value.find { it.id == noteId }
+//
+//
+//                noteToUpdate?.let {
+//                    noteDao.updateNote(it.copy(isPinned = !it.isPinned))
+//                    Log.d("NotesViewModel", "Note pin toggled: $noteId")
+//                }
+//            } catch (e: Exception) {
+//                Log.e("NotesViewModel", "Error toggling note pin", e)
+//            }
+//        }
     }
 
     // Similar functions for categories
@@ -308,7 +358,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun queryNotes(query: String) {
         val noteContext = notes.value.joinToString(" ") {
-            "({id: ${it.id}, title: ${it.title}, content: ${it.content}, categoryId: ${it.categoryId}})"
+            "({id: ${it.id}, title: ${it.title}, content: ${it.content}, categoryId: ${it.categoryId}}, creationDate: ${it.creationDate})"
         }
         Log.d("NotesViewModel", noteContext)
 
@@ -371,4 +421,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             Log.e("NotesViewModel", "Error while querying notes", e)
         }
     }
+
+
 }

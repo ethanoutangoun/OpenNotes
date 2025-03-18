@@ -57,7 +57,6 @@ fun WelcomeScreen(notesViewModel: NotesViewModel) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Borderless TextField with placeholder and keyboard actions
         BasicTextField(
             value = text,
             onValueChange = { text = it },
