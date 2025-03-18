@@ -32,6 +32,8 @@ import androidx.compose.foundation.border
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.BorderColor
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.opennotes.ui.theme.DarkBackgroundColor
+import com.opennotes.ui.theme.DarkBorderColor
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -152,26 +154,27 @@ fun NavigationGraph(navController: NavHostController, notesViewModel: NotesViewM
                 }
             }
         ) {
-            SettingsScreen()
+            SettingsScreen(notesViewModel)
         }
     }
 }
 
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
+fun BottomNavigationBar(navController: NavHostController, viewModel: NotesViewModel) {
     val items = listOf("Welcome", "Query", "Notes", "Settings")
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     NavigationBar(
-        containerColor = BackgroundColor,
+        containerColor = if (viewModel.isDarkMode.value) DarkBackgroundColor else BackgroundColor,
         modifier = Modifier.border(
-            BorderStroke(1.dp, BorderColor)
+            BorderStroke(1.dp, if (viewModel.isDarkMode.value) DarkBorderColor else BorderColor)
         )
     ) {
         items.forEach { screen ->
             val isSelected = currentRoute == screen
-            val itemColor = if (isSelected) BlueSelected else BlackUnselected
+            val unselected = if (viewModel.isDarkMode.value) Color.LightGray else BlackUnselected
+            val itemColor = if (isSelected) BlueSelected else unselected
 
             NavigationBarItem(
                 selected = isSelected,
@@ -214,15 +217,3 @@ fun BottomNavigationBar(navController: NavHostController) {
     }
 }
 
-
-
-@Preview(showBackground = true)
-@Composable
-fun BottomNavigationBarPreview() {
-    // Use rememberNavController for the preview
-    val navController = rememberNavController()
-    // Wrap the preview with your custom theme
-    OpenNotesTheme {
-        BottomNavigationBar(navController = navController)
-    }
-}

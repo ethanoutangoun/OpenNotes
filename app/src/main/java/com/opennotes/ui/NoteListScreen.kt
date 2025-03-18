@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.opennotes.ui.theme.BackgroundColor
+import com.opennotes.ui.theme.DarkBackgroundColor
 import com.opennotes.ui.theme.BlackUnselected
 import com.opennotes.ui.theme.LightGray
 
@@ -41,13 +42,25 @@ fun NoteListScreen(viewModel: NotesViewModel) {
     val notes by viewModel.notes.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val expandedCategories = remember { mutableStateMapOf<String, Boolean>() }
+    val isDarkMode = viewModel.isDarkMode.value
     Log.d("NotesUI", "Notes in UI: ${notes.size}")
     Log.d("NotesUI", "Categories in UI: ${categories.size}")
+
+    // Theme-aware colors
+    val backgroundColor = if (isDarkMode) DarkBackgroundColor else BackgroundColor
+    val textColor = if (isDarkMode) Color.White else Color.Black
+    val searchFieldColor = if (isDarkMode) Color.DarkGray else LightGray
+    val placeholderColor = if (isDarkMode) Color.LightGray else Color.Gray
+    val dividerColor = if (isDarkMode) Color.DarkGray else Color.LightGray
+    val cardBackgroundColor = if (isDarkMode) Color(0xFF2D2D2D) else Color.White
+    val noteContentColor = if (isDarkMode) Color.LightGray else Color.Gray
+    val iconTint = if (isDarkMode) Color.LightGray else Color.DarkGray
+
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundColor)
+            .background(backgroundColor)
             .padding(16.dp)
     ) {
         // Search Bar
@@ -58,15 +71,18 @@ fun NoteListScreen(viewModel: NotesViewModel) {
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(28.dp)),
-            placeholder = { Text("Search notes...") },
+            placeholder = { Text("Search notes...", color = placeholderColor) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search Icon"
+                    contentDescription = "Search Icon",
+                    tint = iconTint
                 )
             },
             colors = TextFieldDefaults.textFieldColors(
-                containerColor = LightGray,
+                containerColor = searchFieldColor,
+                focusedTextColor = textColor,
+                cursorColor = textColor,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
@@ -88,24 +104,26 @@ fun NoteListScreen(viewModel: NotesViewModel) {
                         text = "Pinned",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = textColor
                     )
                 }
 
                 items(pinnedNotes) { note ->
                     val category = categories.find { it.id == note.categoryId }
-                    NoteCard(
-                        note = note,
-                        categoryColor = category?.color ?: Color.Gray,
-                        onPin = { viewModel.toggleNotePin(it.id) },
-                        onDelete = { viewModel.deleteNote(it.id) }
-                    )
+                    NoteCard(note, 
+                             category?.color ?: Color.Gray, 
+                             isDarkMode, cardBackgroundColor, 
+                             noteContentColor, 
+                             onPin = { viewModel.toggleNotePin(it.id) },
+                             onDelete = { viewModel.deleteNote(it.id) })
+
                 }
 
                 item {
                     Divider(
                         modifier = Modifier.padding(vertical = 16.dp),
-                        color = Color.LightGray
+                        color = dividerColor
                     )
                 }
             }
@@ -148,12 +166,13 @@ fun NoteListScreen(viewModel: NotesViewModel) {
 
                     if (expandedCategories[category.id] == true) {
                         items(categoryNotes) { note ->
-                            NoteCard(
-                                note = note,
-                                categoryColor = category.color,
-                                onPin = { viewModel.toggleNotePin(it.id) },
-                                onDelete = { viewModel.deleteNote(it.id) }
-                            )
+                            NoteCard(note, 
+                                     category.color, 
+                                     isDarkMode, 
+                                     cardBackgroundColor, 
+                                     noteContentColor, 
+                                     onPin = { viewModel.toggleNotePin(it.id) },
+                                     onDelete = { viewModel.deleteNote(it.id) })
                         }
                     }
                 }
@@ -195,6 +214,9 @@ fun CategoryHeader(
 fun NoteCard(
     note: Note,
     categoryColor: Color,
+    isDarkMode: Boolean,
+    cardBackgroundColor: Color,
+    noteContentColor: Color
     onPin: (Note) -> Unit,  // Add callback for pin action
     onDelete: (Note) -> Unit  // Add callback for delete action
 ) {
@@ -221,7 +243,7 @@ fun NoteCard(
                 ),
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White
+                containerColor = cardBackgroundColor
             )
         ) {
             Row(
@@ -258,7 +280,7 @@ fun NoteCard(
                     Text(
                         text = if (note.content.length > 50) note.content.take(50) + "..." else note.content,
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = noteContentColor
                     )
                 }
             }
