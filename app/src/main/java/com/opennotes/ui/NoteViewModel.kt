@@ -28,7 +28,7 @@ import java.util.UUID
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val model = Model()
-    private val apiKey = API_KEY_HERE
+    private val apiKey = KEY_HERE
 
     // Database access
     private val database = DatabaseHelper.getDatabase(application)
