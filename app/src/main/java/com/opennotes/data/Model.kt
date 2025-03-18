@@ -57,17 +57,20 @@ class Model {
 
     private fun createDeleteNoteFunction(): FunctionDefinition {
         return FunctionDefinition(
-            name = "delete_note",
-            description = "Delete a note by its ID",
+            name = "delete_notes",
+            description = "Delete multiple notes by providing a list of IDs",
             parameters = mapOf(
                 "type" to "object",
                 "properties" to mapOf(
-                    "note_id" to mapOf(
-                        "type" to "string",
-                        "description" to "The ID of the note to delete"
+                    "note_ids" to mapOf(
+                        "type" to "array",
+                        "description" to "An array of note IDs to delete",
+                        "items" to mapOf(
+                            "type" to "string"
+                        )
                     )
                 ),
-                "required" to listOf("note_id")
+                "required" to listOf("note_ids")
             )
         )
     }
@@ -94,7 +97,6 @@ class Model {
         }
 
         val prompt = """
-            
             Existing categories: $categoriesText
                     
             Note Content: $noteContent
@@ -158,10 +160,12 @@ class Model {
         // Create a prompt for the query along with the provided note context
         val prompt = """
     You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
-    If the user wants to delete a note, call the 'delete_note' function with the correct note ID.
-    Otherwise, answer normally.
-    Return answers in a concise and useful format.
-    Here is some context about a note: 
+    You will receive context on the user's notes, use the contents of the notes to provide helpful answers.
+    If the user wants to delete notes, call the 'delete_notes' function with the correct note IDs. Otherwise, answer normally.
+    For deletion requests, include all relevant note IDs that should be deleted based on the user's query.
+    Return answers in a concise and useful format, in plaintext not markdown.
+    
+    Here is the context for the user's notes: 
     $noteContext
     
     Based on this context, answer the following query:

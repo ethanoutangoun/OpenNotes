@@ -307,7 +307,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun queryNotes(query: String) {
-        val noteContext = _notes.value.joinToString(" ") {
+        val noteContext = notes.value.joinToString(" ") {
             "({id: ${it.id}, title: ${it.title}, content: ${it.content}, categoryId: ${it.categoryId}})"
         }
         Log.d("NotesViewModel", noteContext)
@@ -318,14 +318,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             val response = result["response"]
             val functionCall = result["type"] == "function"
 
-
             // Check if function call occurs
             if (functionCall) {
                 // If it's a function call, you have the function name and parameters
                 val functionName = result["function_name"] as String
                 val arguments = result["params"]
-
-
 
                 Log.d("FunctionCall", "Function Name: $functionName")
                 Log.d("FunctionCall", "Arguments: $arguments")
@@ -339,13 +336,20 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
                 jsonObject?.let {
                     when (functionName) {
-                        "delete_note" -> {
+                        "delete_notes" -> {
                             try {
-                                val noteId = it.get("note_id").asString
-                                // Perform the delete note operation
-                                deleteNote(noteId)
+                                // Get the array of note IDs
+                                val noteIdsArray = it.getAsJsonArray("note_ids")
+
+                                // Process each note ID in the array
+                                noteIdsArray.forEach { noteIdElement ->
+                                    val noteId = noteIdElement.asString
+                                    // Delete each note
+                                    deleteNote(noteId)
+                                    Log.d("FunctionCall", "Deleting note with ID: $noteId")
+                                }
                             } catch (e: Exception) {
-                                Log.e("FunctionCall", "Error extracting note_id: $e")
+                                Log.e("FunctionCall", "Error extracting note_ids: $e")
                             }
                         }
                         // Handle other function cases
