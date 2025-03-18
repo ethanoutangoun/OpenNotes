@@ -158,6 +158,33 @@ class Model {
         }
     }
 
+    // Function to generate titles for notes
+    suspend fun summarizeNote(
+        apiKey: String,
+        query: String,
+    ): String = withContext(Dispatchers.IO) {
+        // Create a simplified prompt without note context
+        val prompt = """
+    Note content:
+    $query
+    """.trimIndent()
+
+        val request = ChatRequest(
+            messages = listOf(
+                Message("system", "You are a helpful assistant designed to condense the content of a note into a concise title. Return just the title name"),
+                Message("user", prompt)
+            )
+        )
+
+        // Get the response from OpenAI API
+        val response = service.getChatCompletion("Bearer $apiKey", request)
+        val responseMessage = response.choices.first().message
+
+        // Simply return the content as a string
+        responseMessage.content?.trim() ?: "No response content"
+    }
+
+
     suspend fun queryPostFunction(
         apiKey: String,
         query: String,
@@ -173,7 +200,7 @@ class Model {
     This function has just been executed: 
     $query
     
-    Let the user know their operation succeeded.
+    Let the user know what you did and that the operation succeeded.
     """.trimIndent()
 
         val request = ChatRequest(
@@ -201,6 +228,7 @@ class Model {
     You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
     You will receive context on the user's notes, use the contents of the notes to provide helpful answers.
     If the user wants to delete notes, call the 'delete_notes' function with the correct note IDs. 
+    If the user has stated a task from a note has been completed, delete that note.
     Ensure you only delete notes that exactly fit their request, otherwise do not call "delete_notes".
     Otherwise, answer normally.
     For deletion requests, include all relevant note IDs that should be deleted based on the user's query.
@@ -208,15 +236,17 @@ class Model {
     
     Here is the context for the user's notes: 
     $noteContext
-    
-    Based on this context, answer the following query:
-    $query
     """.trimIndent()
+
+        val message = """          
+            Based on the user's context, answer the following query:
+            $query
+        """.trimIndent()
 
         val request = ChatRequest(
             messages = listOf(
-                Message("system", "You are a helpful assistant."),
-                Message("user", prompt)
+                Message("system", prompt),
+                Message("user", message)
             ),
             functions = listOf(createDeleteNoteFunction())
         )
