@@ -50,7 +50,7 @@ data class Category(
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val model = Model()
-    private val apiKey = ""
+    private val apiKey =  ""
 
     // Database access
     private val database = DatabaseHelper.getDatabase(application)

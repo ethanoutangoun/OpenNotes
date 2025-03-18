@@ -19,7 +19,8 @@ fun NoteApp(viewModel: NotesViewModel) {
 
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController, viewModel) }
+        bottomBar = { BottomNavigationBar(navController, viewModel) },
+        modifier = Modifier.background(backgroundColor)
     ) { padding ->
 
         Box(modifier = Modifier.padding(padding).background(backgroundColor)) {

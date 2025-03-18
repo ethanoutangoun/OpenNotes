@@ -126,7 +126,7 @@ fun QueryScreen(viewModel: NotesViewModel) {
             ),
             enabled = queryInput.isNotEmpty() && !isSearching
         ) {
-            Text(text = "Search")
+            Text(text = "Submit")
         }
 
         Spacer(modifier = Modifier.height(24.dp))
