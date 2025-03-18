@@ -133,16 +133,6 @@ fun QueryScreen(viewModel: NotesViewModel) {
 
         // Show loading indicator while searching
         if (isSearching) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .wrapContentSize(Alignment.Center)
-            ) {
-                CircularProgressIndicator(
-                    color = if (isDarkMode) Color.White else MaterialTheme.colorScheme.primary
-                )
-            }
             FloatingRobotEmptyState()
         } else {
             // Display query result

@@ -150,11 +150,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             if (roomNotes.isNotEmpty()) {
                 val uiNotes = roomNotes.map { roomNote ->
                     // Extract title from content (first line or first 30 chars)
-                    val title = roomNote.content.split("\n").firstOrNull() ?:
-                    if (roomNote.content.length > 30)
-                        roomNote.content.substring(0, 30) + "..."
-                    else
-                        roomNote.content
+                    val title = roomNote.content.split("\n").firstOrNull()
+                        ?: if (roomNote.content.length > 30)
+                            roomNote.content.substring(0, 30) + "..."
+                        else
+                            roomNote.content
 
 
 
@@ -177,11 +177,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     noteDao.insertNote(roomNote)
                 }
-            } catch (e: Exception) {
+            }
+        }
+
+            catch (e: Exception) {
                 Log.e("NotesViewModel", "Error loading notes from DB", e)
             }
         }
-    }
+
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query

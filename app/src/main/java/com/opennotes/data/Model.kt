@@ -105,7 +105,8 @@ class Model {
             Analyze this note and categorize it. If not many categories, make a new one, even if it kind of fits.
             If it fits VERY WELL into an existing category, just return the category name and a random color, separated by a space.
             If it could benefit from adding another category, return the new category name along with a color that goes well with it.
-            Ensure color hex values are always 6 characters long (RRGGBB) without an alpha channel. Colors chosen should stand out from a white background.
+            Pick colors that aren't neutral (black/white/gray), ensure it is able to stand out against a white/black background.
+            Ensure color hex values are always 6 characters long (RRGGBB) without an alpha channel. 
            
             Example Outputs:
             Journaling 0xFFFFFF
@@ -137,6 +138,8 @@ class Model {
      * Function to parse a hex color string to a Color object.
      */
     private fun parseColor(colorString: String): Color {
+
+        val defaultColor = Color.Magenta
         return try {
             val cleanedColorString = colorString.removePrefix("0x")
 
@@ -146,10 +149,12 @@ class Model {
                 val argb = "FF$cleanedColorString"
                 Color(android.graphics.Color.parseColor("#$argb"))
             } else {
-                Color.Black // Default fallback color
+                Log.d("Model", "Color does not match regex, defaulting to $defaultColor")
+                defaultColor
             }
         } catch (e: Exception) {
-            Color.Black
+            Log.d("Model", "Color parsing failed, defaulting to $defaultColor")
+            defaultColor
         }
     }
 

@@ -216,7 +216,7 @@ fun NoteCard(
     categoryColor: Color,
     isDarkMode: Boolean,
     cardBackgroundColor: Color,
-    noteContentColor: Color
+    noteContentColor: Color,
     onPin: (Note) -> Unit,  // Add callback for pin action
     onDelete: (Note) -> Unit  // Add callback for delete action
 ) {
