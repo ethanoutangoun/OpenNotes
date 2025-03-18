@@ -152,6 +152,39 @@ class Model {
         }
     }
 
+    suspend fun queryPostFunction(
+        apiKey: String,
+        query: String,
+        context: String
+    ): String = withContext(Dispatchers.IO) {
+        // Create a simplified prompt without note context
+        val prompt = """
+    You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
+    
+    Here is context to the conversation:
+    $context
+   
+    This function has just been executed: 
+    $query
+    
+    Let the user know their operation succeeded.
+    """.trimIndent()
+
+        val request = ChatRequest(
+            messages = listOf(
+                Message("system", "You are a helpful assistant."),
+                Message("user", prompt)
+            )
+        )
+
+        // Get the response from OpenAI API
+        val response = service.getChatCompletion("Bearer $apiKey", request)
+        val responseMessage = response.choices.first().message
+
+        // Simply return the content as a string
+        responseMessage.content?.trim() ?: "No response content"
+    }
+
     suspend fun queryWithContext(
         apiKey: String,
         query: String,
@@ -161,7 +194,9 @@ class Model {
         val prompt = """
     You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
     You will receive context on the user's notes, use the contents of the notes to provide helpful answers.
-    If the user wants to delete notes, call the 'delete_notes' function with the correct note IDs. Otherwise, answer normally.
+    If the user wants to delete notes, call the 'delete_notes' function with the correct note IDs. 
+    Ensure you only delete notes that exactly fit their request, otherwise do not call "delete_notes".
+    Otherwise, answer normally.
     For deletion requests, include all relevant note IDs that should be deleted based on the user's query.
     Return answers in a concise and useful format, in plaintext not markdown.
     

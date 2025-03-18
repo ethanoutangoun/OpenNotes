@@ -314,8 +314,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         try {
             // Call the model to query the notes
-            val result = model.queryWithContext(apiKey, query, noteContext)
-            val response = result["response"]
+            var result = model.queryWithContext(apiKey, query, noteContext)
+            var response = result["response"]
             val functionCall = result["type"] == "function"
 
             // Check if function call occurs
@@ -358,6 +358,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
+
+                response = model.queryPostFunction(apiKey, response.toString(), query)
             }
 
             // Update the response

@@ -3,6 +3,8 @@ package com.opennotes.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -12,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.LightGray
 import kotlinx.coroutines.launch
@@ -23,6 +27,7 @@ import kotlinx.coroutines.launch
 fun QueryScreen(viewModel: NotesViewModel) {
     val queryInput by viewModel.queryInput.collectAsState()
     val queryResult by viewModel.queryResult.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // State to track if search has been triggered
     var isSearching by remember { mutableStateOf(false) }
@@ -30,16 +35,28 @@ fun QueryScreen(viewModel: NotesViewModel) {
     // CoroutineScope to launch the suspending function
     val coroutineScope = rememberCoroutineScope()
 
+    // Function to handle search action
+    val performSearch = {
+        if (queryInput.isNotEmpty() && !isSearching) {
+            isSearching = true
+            keyboardController?.hide() // Hide keyboard after search is triggered
+            coroutineScope.launch {
+                viewModel.queryNotes(queryInput)
+                isSearching = false
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundColor)
             .padding(16.dp)
     ) {
-        // Search Bar
+        // Search Bar with keyboard actions
         TextField(
             value = queryInput,
-            onValueChange = { viewModel.updateQueryInput(it)},
+            onValueChange = { viewModel.updateQueryInput(it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
@@ -57,21 +74,19 @@ fun QueryScreen(viewModel: NotesViewModel) {
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
             ),
-            singleLine = true
+            singleLine = true,
+            // Add keyboard options and actions
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {
+                performSearch()
+            })
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         // Search Button
         Button(
-            onClick = {
-                isSearching = true
-                // Launch the queryNotes suspending function within a coroutine
-                coroutineScope.launch {
-                    viewModel.queryNotes(queryInput) // Trigger query when button is clicked
-                    isSearching = false // Reset isSearching after the search is completed
-                }
-            },
+            onClick = { performSearch() },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
             enabled = queryInput.isNotEmpty() && !isSearching
