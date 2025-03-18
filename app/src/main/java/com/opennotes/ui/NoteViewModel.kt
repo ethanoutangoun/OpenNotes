@@ -14,9 +14,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
@@ -25,12 +28,14 @@ import java.util.UUID
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val model = Model()
-    private val apiKey = KEY_HERE
+    private val apiKey = API_KEY_HERE
 
     // Database access
     private val database = DatabaseHelper.getDatabase(application)
     private val noteDao = database.noteDao()
     private val categoryDao = database.categoryDao()
+    val isDarkMode = mutableStateOf(false)
+    val selectedTextSize =mutableStateOf("Medium")
 
     private val _queryInput = MutableStateFlow("")
     val queryInput: StateFlow<String> = _queryInput
@@ -58,91 +63,96 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     // Initialize database if needed
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            // Load initial data
+        viewModelScope.launch {
+            // Load data sequentially
             loadCategoriesFromDb()
             loadNotesFromDb()
         }
     }
 
     private suspend fun loadCategoriesFromDb() {
-        try {
-            val roomCategories = categoryDao.getAllCategories().stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                emptyList()
-            ).value
+        withContext(Dispatchers.IO) {
+            try {
+                // Collect all categories at once
+                val roomCategories = categoryDao.getAllCategories().first()
 
-            if (roomCategories.isNotEmpty()) {
-                val uiCategories = roomCategories.map { roomCategory ->
-                    // Convert hex color string to Color
-                    val colorInt = try {
-                        android.graphics.Color.parseColor(roomCategory.colorHex)
-                    } catch (e: Exception) {
-                        0xFF2196F3.toInt() // Default blue if parsing fails
+                if (roomCategories.isNotEmpty()) {
+                    val uiCategories = roomCategories.map { roomCategory  ->
+                        // Convert hex color string to Color
+                        Log.d("NoteViewModel", roomCategory.colorHex.substring(0, 9))
+                        val colorInt = try {
+                            android.graphics.Color.parseColor(roomCategory.colorHex.substring(0, 9))
+                        } catch (e: Exception) {
+                            0xFF2196F3.toInt() // Default blue if parsing fails
+                            Log.d("NoteViewModel", "parsing failed")
+                        }
+
+                        Category(
+                            id = roomCategory.id,
+                            name = roomCategory.name,
+                            color = Color(colorInt)
+                        )
                     }
-
-                    Category(
-                        id = roomCategory.id,
-                        name = roomCategory.name,
-                        color = Color(colorInt)
-                    )
+                    _categories.value = uiCategories
+                    Log.d("NotesViewModel", "Loaded ${uiCategories.size} categories from database")
+                } else {
+                    // DB is empty, save our initial data to DB
+                    _categories.value.forEach { category ->
+                        val roomCategory = RoomCategory(
+                            id = category.id,
+                            name = category.name,
+                            colorHex = "#${category.color.value.toString(16)}"
+                        )
+                        categoryDao.insertCategory(roomCategory)
+                    }
+                    Log.d("NotesViewModel", "Initialized categories in database")
                 }
-                _categories.value = uiCategories
-            } else {
-                // DB is empty, save our initial data to DB
-                _categories.value.forEach { category ->
-                    val roomCategory = RoomCategory(
-                        id = category.id,
-                        name = category.name,
-                        colorHex = "#${category.color.value.toString(16)}"
-                    )
-                    categoryDao.insertCategory(roomCategory)
-                }
+            } catch (e: Exception) {
+                Log.e("NotesViewModel", "Error loading categories from DB", e)
             }
-        } catch (e: Exception) {
-            Log.e("NotesViewModel", "Error loading categories from DB", e)
         }
     }
 
     private suspend fun loadNotesFromDb() {
-        try {
-            val roomNotes = noteDao.getAllNotes().stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                emptyList()
-            ).value
+        withContext(Dispatchers.IO) {
+            try {
+                // Collect all notes at once
+                val roomNotes = noteDao.getAllNotes().first()
 
-            if (roomNotes.isNotEmpty()) {
-                val uiNotes = roomNotes.map { roomNote ->
-                    // Extract title from content (first line or first 30 chars)
-                    val title = roomNote.content.split("\n").firstOrNull() ?:
-                    if (roomNote.content.length > 30)
-                        roomNote.content.substring(0, 30) + "..."
-                    else
-                        roomNote.content
+                if (roomNotes.isNotEmpty()) {
+                    val uiNotes = roomNotes.map { roomNote ->
+                        // Extract title from content (first line or first 30 chars)
+                        val title = roomNote.content.split("\n").firstOrNull() ?:
+                        if (roomNote.content.length > 30)
+                            roomNote.content.substring(0, 30) + "..."
+                        else
+                            roomNote.content
 
-                    Note(
-                        id = roomNote.id,
-                        title = title,
-                        content = roomNote.content,
-                        categoryId = roomNote.categoryId.toString(),
-                    )
+                        Note(
+                            id = roomNote.id,
+                            title = title,
+                            content = roomNote.content,
+                            categoryId = roomNote.categoryId,
+                            isPinned = false // You might want to add this to your Room entity
+                        )
+                    }
+                    _notes.value = uiNotes
+                    Log.d("NotesViewModel", "Loaded ${uiNotes.size} notes from database")
+                } else {
+                    // DB is empty, save our initial data to DB
+                    _notes.value.forEach { note ->
+                        val roomNote = RoomNote(
+                            id = note.id,
+                            content = note.content,
+                            categoryId = note.categoryId
+                        )
+                        noteDao.insertNote(roomNote)
+                    }
+                    Log.d("NotesViewModel", "Initialized notes in database")
                 }
-                _notes.value = uiNotes
-            } else {
-                // DB is empty, save our initial data to DB
-                _notes.value.forEach { note ->
-                    val roomNote = RoomNote(
-                        id = note.id,
-                        content = note.content,
-                        categoryId = note.categoryId
-                    )
-                    noteDao.insertNote(roomNote)
-                }
+            } catch (e: Exception) {
+                Log.e("NotesViewModel", "Error loading notes from DB", e)
             }
-        } catch (e: Exception) {
-            Log.e("NotesViewModel", "Error loading notes from DB", e)
         }
     }
 
@@ -322,5 +332,31 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.e("NotesViewModel", "Error while querying notes", e)
         }
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    noteDao.deleteAllNotes()
+                    Log.d("NotesViewModel", "All notes deleted from database")
+
+                    // Then delete all categories
+                    categoryDao.deleteAllCategories()
+                    Log.d("NotesViewModel", "All categories deleted from database")
+                }
+
+                // Update UI state on the main thread
+                _notes.value = emptyList()
+                _categories.value = emptyList()
+
+                Log.d("NotesViewModel", "All data cleared successfully")
+            } catch (e: Exception) {
+                Log.e("NotesViewModel", "Error clearing all data", e)
+            }
+        }
+    }
+    fun toggleDarkMode() {
+        isDarkMode.value = !isDarkMode.value
     }
 }
