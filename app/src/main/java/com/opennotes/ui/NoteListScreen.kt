@@ -54,7 +54,6 @@ fun NoteListScreen(viewModel: NotesViewModel) {
     val expandedCategories = remember { mutableStateMapOf<String, Boolean>() }
     Log.d("NotesUI", "Notes in UI: ${notes.size}")
     Log.d("NotesUI", "Categories in UI: ${categories.size}")
-    Log.d("NotesUI", "Note 1: ${notes[0]}")
 
     Column(
         modifier = Modifier

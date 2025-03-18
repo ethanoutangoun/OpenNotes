@@ -1,5 +1,6 @@
 package com.opennotes.data
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import com.opennotes.ui.Category
 import kotlinx.coroutines.Dispatchers
@@ -23,12 +24,25 @@ interface OpenAIService {
 data class ChatRequest(
     val model: String = "gpt-4o",
     val messages: List<Message>,
-    val temperature: Double = 0.5
+    val functions: List<FunctionDefinition>? = null,
+    val temperature: Double = 0.01
+)
+
+data class FunctionDefinition(
+    val name: String,
+    val description: String,
+    val parameters: Map<String, Any>
 )
 
 data class Message(
     val role: String,
-    val content: String
+    val content: String?,
+    val function_call: FunctionCall? = null
+)
+
+data class FunctionCall(
+    val name: String,
+    val arguments: String
 )
 
 data class ChatResponse(
@@ -40,6 +54,25 @@ data class Choice(
 )
 
 class Model {
+
+    private fun createDeleteNoteFunction(): FunctionDefinition {
+        return FunctionDefinition(
+            name = "delete_note",
+            description = "Delete a note by its ID",
+            parameters = mapOf(
+                "type" to "object",
+                "properties" to mapOf(
+                    "note_id" to mapOf(
+                        "type" to "string",
+                        "description" to "The ID of the note to delete"
+                    )
+                ),
+                "required" to listOf("note_id")
+            )
+        )
+    }
+
+
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://api.openai.com/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -84,7 +117,7 @@ class Model {
         )
 
         val response = service.getChatCompletion("Bearer $apiKey", request)
-        val answer = response.choices.first().message.content.trim()
+        val answer = response.choices.first().message.content?.trim() ?: ""
 
         // Use existing category
         val parts = answer.split(" ")
@@ -121,29 +154,48 @@ class Model {
         apiKey: String,
         query: String,
         noteContext: String
-    ): String = withContext(Dispatchers.IO) {
+    ): Map<String, Any> = withContext(Dispatchers.IO) {
         // Create a prompt for the query along with the provided note context
         val prompt = """
-        You are a helpful assistant designed to help users efficiently query their saved notes. Return answers in a concise and useful format.
-        Here is some context about a note: 
-        $noteContext
-        
-        Based on this context, answer the following query:
-        $query
+    You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
+    If the user wants to delete a note, call the 'delete_note' function with the correct note ID.
+    Otherwise, answer normally.
+    Return answers in a concise and useful format.
+    Here is some context about a note: 
+    $noteContext
+    
+    Based on this context, answer the following query:
+    $query
     """.trimIndent()
 
         val request = ChatRequest(
             messages = listOf(
                 Message("system", "You are a helpful assistant."),
                 Message("user", prompt)
-            )
+            ),
+            functions = listOf(createDeleteNoteFunction())
         )
 
         // Get the response from OpenAI API
         val response = service.getChatCompletion("Bearer $apiKey", request)
-        val answer = response.choices.first().message.content.trim()
+        val responseMessage = response.choices.first().message
 
-        // Return the answer
-        answer
+
+        // Check if we have a function call
+        return@withContext if (responseMessage.function_call != null) {
+            // Function call detected, return function name and arguments
+            mapOf(
+                "response" to "Function call: ${responseMessage.function_call.name} with arguments: ${responseMessage.function_call.arguments}",
+                "type" to "function",
+                "function_name" to responseMessage.function_call.name,
+                "params" to responseMessage.function_call.arguments
+            )
+        } else {
+            // Regular message response
+            mapOf(
+                "response" to (responseMessage.content?.trim() ?: "No response content"),
+                "type" to "message"
+            )
+        }
     }
 }

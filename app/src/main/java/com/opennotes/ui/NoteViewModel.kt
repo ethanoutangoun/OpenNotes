@@ -20,12 +20,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val model = Model()
-    private val apiKey = KEY_HERE
+    private val apiKey = ""
 
     // Database access
     private val database = DatabaseHelper.getDatabase(application)
@@ -149,51 +152,47 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
 
-        // Also update the filtered notes based on search query
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (query.isNotEmpty()) {
-                    val searchResults = noteDao.searchNotes("%$query%").stateIn(
-                        viewModelScope,
-                        SharingStarted.Eagerly,
-                        emptyList()
-                    ).value
 
-                    val uiResults = searchResults.map { roomNote ->
-                        val title = roomNote.content.split("\n").firstOrNull() ?:
-                        if (roomNote.content.length > 30)
-                            roomNote.content.substring(0, 30) + "..."
-                        else
-                            roomNote.content
 
-                        Note(
-                            id = roomNote.id,
-                            title = title,
-                            content = roomNote.content,
-                            categoryId = roomNote.categoryId.toString()
-                        )
-                    }
-                    _notes.value = uiResults
-                } else {
-                    // If empty query, load all notes
-                    loadNotesFromDb()
-                }
-            } catch (e: Exception) {
-                Log.e("NotesViewModel", "Error searching notes", e)
-            }
-        }
+//        Whenever I type, it deletes all notes so I removed below logic, not sure what this is doing
+
+//        // Also update the filtered notes based on search query
+//        viewModelScope.launch(Dispatchers.IO) {
+//            try {
+//                if (query.isNotEmpty()) {
+//                    val searchResults = noteDao.searchNotes("%$query%").stateIn(
+//                        viewModelScope,
+//                        SharingStarted.Eagerly,
+//                        emptyList()
+//                    ).value
+//
+//                    val uiResults = searchResults.map { roomNote ->
+//                        val title = roomNote.content.split("\n").firstOrNull() ?:
+//                        if (roomNote.content.length > 30)
+//                            roomNote.content.substring(0, 30) + "..."
+//                        else
+//                            roomNote.content
+//
+//                        Note(
+//                            id = roomNote.id,
+//                            title = title,
+//                            content = roomNote.content,
+//                            categoryId = roomNote.categoryId.toString()
+//                        )
+//                    }
+//                    _notes.value = uiResults
+//                } else {
+//                    // If empty query, load all notes
+//                    loadNotesFromDb()
+//                }
+//            } catch (e: Exception) {
+//                Log.e("NotesViewModel", "Error searching notes", e)
+//            }
+//        }
     }
 
     fun updateQueryInput(query: String){
         _queryInput.value = query
-    }
-
-    fun String.removePrefix(prefix: String): String {
-        return if (this.startsWith(prefix)) {
-            this.substring(prefix.length)
-        } else {
-            this
-        }
     }
 
     suspend fun addNote(content: String) {
@@ -261,7 +260,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun deleteNote(noteId: String) {
+    private fun deleteNote(noteId: String) {
         // Remove from UI state
         _notes.value = _notes.value.filter { it.id != noteId }
 
@@ -308,14 +307,57 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun queryNotes(query: String) {
-        val noteContext = _notes.value.joinToString(" ") { it.content }
+        val noteContext = _notes.value.joinToString(" ") {
+            "({id: ${it.id}, title: ${it.title}, content: ${it.content}, categoryId: ${it.categoryId}})"
+        }
+        Log.d("NotesViewModel", noteContext)
 
         try {
             // Call the model to query the notes
             val result = model.queryWithContext(apiKey, query, noteContext)
+            val response = result["response"]
+            val functionCall = result["type"] == "function"
 
-            // Update the query result in MutableStateFlow
-            _queryResult.value = result
+
+            // Check if function call occurs
+            if (functionCall) {
+                // If it's a function call, you have the function name and parameters
+                val functionName = result["function_name"] as String
+                val arguments = result["params"]
+
+
+
+                Log.d("FunctionCall", "Function Name: $functionName")
+                Log.d("FunctionCall", "Arguments: $arguments")
+
+                val jsonObject = try {
+                    JsonParser.parseString(arguments.toString()).asJsonObject
+                } catch (e: Exception) {
+                    Log.e("FunctionCall", "Error parsing arguments: $e")
+                    null
+                }
+
+                jsonObject?.let {
+                    when (functionName) {
+                        "delete_note" -> {
+                            try {
+                                val noteId = it.get("note_id").asString
+                                // Perform the delete note operation
+                                deleteNote(noteId)
+                            } catch (e: Exception) {
+                                Log.e("FunctionCall", "Error extracting note_id: $e")
+                            }
+                        }
+                        // Handle other function cases
+                        else -> {
+                            Log.d("FunctionCall", "Unknown function: $functionName")
+                        }
+                    }
+                }
+            }
+
+            // Update the response
+            _queryResult.value = response.toString()
 
             Log.d("NotesViewModel", "Query Result: $result")
 
