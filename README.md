@@ -20,6 +20,15 @@ OpenNotes is an AI-powered note-taking application built with Kotlin and the Ope
 3. Configure your OpenAI API key in the environment or app settings.
 4. Build and run the project on an emulator or physical device.
 
+## Device & SDK Requirements
+
+- **Minimum SDK Version**: 24
+- **Target SDK Version**: 35
+- **Required Features**:
+  - Internet Access (for OpenAI API calls)
+  - Local Storage Permissions (for saving notes)
+- More information in the project's build.gradle file
+
 ## Usage
 
 - Add notes via text input on the "Welcome Screen".
