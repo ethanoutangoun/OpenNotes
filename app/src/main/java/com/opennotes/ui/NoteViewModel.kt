@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import com.google.gson.JsonParser
+import com.opennotes.BuildConfig
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -50,7 +51,7 @@ data class Category(
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val model = Model()
-    private val apiKey =  ""
+    private val apiKey =  BuildConfig.OPENAI_API_KEY
 
     // Database access
     private val database = DatabaseHelper.getDatabase(application)
