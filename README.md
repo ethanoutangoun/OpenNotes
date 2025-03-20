@@ -48,4 +48,11 @@ OpenNotes is an AI-powered note-taking application built with Kotlin and the Ope
 ## Figma Design
 ![image](https://github.com/user-attachments/assets/3adde875-bb4e-41f9-b38e-c610e5d222d7)
 
+## Above and Beyond
+
+- Implemented a **context-aware AI retrieval system** to provide better note suggestions.
+- Implemented function calling using OpenAI API to manipulate database using Natural Language queries.
+- Designed a **clean and intuitive UI** using custom animations and theming.
+
+
 
