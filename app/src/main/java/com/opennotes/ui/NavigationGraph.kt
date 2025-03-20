@@ -1,29 +1,20 @@
 package com.opennotes.ui
 
-import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.contentColorFor
 import com.opennotes.ui.theme.BlueSelected
-import com.opennotes.ui.theme.GrayBackground
 import com.opennotes.ui.theme.BlackUnselected
-import com.opennotes.ui.theme.OpenNotesTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -31,7 +22,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.BorderColor
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.opennotes.ui.theme.DarkBackgroundColor
 import com.opennotes.ui.theme.DarkBorderColor
 

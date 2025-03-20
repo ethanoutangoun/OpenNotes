@@ -50,7 +50,6 @@ fun QueryScreen(viewModel: NotesViewModel) {
     val placeholderColor = if (isDarkMode) Color.LightGray else Color.Gray
     val resultBackgroundColor = if (isDarkMode) Color(0xFF2D2D2D) else Color(0xFFF6F6F6)
     val resultTextColor = if (isDarkMode) Color.White else Color.Black
-    val noResultsTextColor = if (isDarkMode) Color.LightGray else Color.Gray
     val iconTint = if (isDarkMode) Color.LightGray else Color.DarkGray
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -133,7 +132,7 @@ fun QueryScreen(viewModel: NotesViewModel) {
 
         // Show loading indicator while searching
         if (isSearching) {
-            FloatingRobotEmptyState()
+            LoadingIcon()
         } else {
             // Display query result
             if (queryResult.isNotEmpty()) {
@@ -157,17 +156,15 @@ fun QueryScreen(viewModel: NotesViewModel) {
 
 
 @Composable
-fun FloatingRobotEmptyState() {
+fun LoadingIcon() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Create animations using infinite transition
         val infiniteTransition = rememberInfiniteTransition()
 
-        // Vertical floating animation
         val yOffset by infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = 15f,
@@ -177,7 +174,6 @@ fun FloatingRobotEmptyState() {
             )
         )
 
-        // Much faster rotation animation - 360 degrees with easing in and then going very fast
         val rotation by infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = 360f,
@@ -195,7 +191,7 @@ fun FloatingRobotEmptyState() {
                 .height(180.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Robot image with floating and faster rotation animations
+
             Image(
                 painter = painterResource(id = R.drawable.robot_empty_state),
                 contentDescription = "Robot Empty State",

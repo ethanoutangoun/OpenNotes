@@ -84,9 +84,7 @@ class Model {
 
     private val service = retrofit.create(OpenAIService::class.java)
 
-    /**
-     * Simple function to get a category for a note
-     */
+
     suspend fun categorizeSingleNote(
         apiKey: String,
         noteContent: String,
@@ -128,7 +126,6 @@ class Model {
         val categoryName = parts.firstOrNull()?.trim() ?: ""
         val categoryColor = parts.getOrNull(1)?.trim() ?: ""
 
-        // Parse the color and handle the "0x" prefix
         val color = parseColor(categoryColor)
 
         Pair(categoryName, color)
@@ -143,9 +140,7 @@ class Model {
         return try {
             val cleanedColorString = colorString.removePrefix("0x")
 
-            // Ensure it is exactly 6 characters (RGB format)
             if (cleanedColorString.length == 6 && cleanedColorString.matches(Regex("^[0-9A-Fa-f]+$"))) {
-                // Prepend "FF" for full opacity
                 val argb = "FF$cleanedColorString"
                 Color(android.graphics.Color.parseColor("#$argb"))
             } else {
@@ -158,12 +153,11 @@ class Model {
         }
     }
 
-    // Function to generate titles for notes
     suspend fun summarizeNote(
         apiKey: String,
         query: String,
     ): String = withContext(Dispatchers.IO) {
-        // Create a simplified prompt without note context
+
         val prompt = """
     Note content:
     $query
@@ -176,11 +170,9 @@ class Model {
             )
         )
 
-        // Get the response from OpenAI API
         val response = service.getChatCompletion("Bearer $apiKey", request)
         val responseMessage = response.choices.first().message
 
-        // Simply return the content as a string
         responseMessage.content?.trim() ?: "No response content"
     }
 
@@ -190,7 +182,6 @@ class Model {
         query: String,
         context: String
     ): String = withContext(Dispatchers.IO) {
-        // Create a simplified prompt without note context
         val prompt = """
     You are a helpful assistant designed to help users efficiently query/manage their saved notes. 
     
@@ -251,14 +242,11 @@ class Model {
             functions = listOf(createDeleteNoteFunction())
         )
 
-        // Get the response from OpenAI API
         val response = service.getChatCompletion("Bearer $apiKey", request)
         val responseMessage = response.choices.first().message
 
 
-        // Check if we have a function call
         return@withContext if (responseMessage.function_call != null) {
-            // Function call detected, return function name and arguments
             mapOf(
                 "response" to "Function call: ${responseMessage.function_call.name} with arguments: ${responseMessage.function_call.arguments}",
                 "type" to "function",
@@ -266,7 +254,6 @@ class Model {
                 "params" to responseMessage.function_call.arguments
             )
         } else {
-            // Regular message response
             mapOf(
                 "response" to (responseMessage.content?.trim() ?: "No response content"),
                 "type" to "message"

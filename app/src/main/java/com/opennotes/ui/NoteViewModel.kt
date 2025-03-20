@@ -1,7 +1,6 @@
 package com.opennotes.ui
 
 import android.app.Application
-import android.os.Build
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,10 +14,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-
-import androidx.annotation.RequiresApi
-import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
@@ -284,24 +279,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         _notes.value = _notes.value.map { note ->
             if (note.id == noteId) note.copy(isPinned = !note.isPinned) else note
         }
-//
-//        viewModelScope.launch(Dispatchers.IO) {
-//            try {
-//                val noteToUpdate = noteDao.getAllNotes().stateIn(
-//                    viewModelScope,
-//                    SharingStarted.Eagerly,
-//                    emptyList()
-//                ).value.find { it.id == noteId }
-//
-//
-//                noteToUpdate?.let {
-//                    noteDao.updateNote(it.copy(isPinned = !it.isPinned))
-//                    Log.d("NotesViewModel", "Note pin toggled: $noteId")
-//                }
-//            } catch (e: Exception) {
-//                Log.e("NotesViewModel", "Error toggling note pin", e)
-//            }
-//        }
     }
 
     // Similar functions for categories

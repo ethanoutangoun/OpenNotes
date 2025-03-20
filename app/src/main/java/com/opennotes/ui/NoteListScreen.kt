@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.opennotes.ui.theme.BackgroundColor
 import com.opennotes.ui.theme.DarkBackgroundColor
 import com.opennotes.ui.theme.BlackUnselected
