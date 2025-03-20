@@ -34,4 +34,5 @@ OpenNotes is an AI-powered note-taking application built with Kotlin and the Ope
 - **OpenAI API**: AI-powered note analysis and search.
 - **Room Database**: Local storage for notes.
 - **ViewModel & LiveData**: State management.
+- **Retrofit**: HTTP client for API calls.
 
