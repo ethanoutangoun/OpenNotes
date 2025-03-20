@@ -1,6 +1,6 @@
 # OpenNotes
 
-OpenNotes is an AI-powered note-taking application built with Kotlin and the OpenAI API. It automatically categorizes and stores notes for you, allowing you to efficiently manage and query your notes for better contextual answers. The app also provides functionality to delete notes as needed.
+OpenNotes is an AI-powered note-taking application built with Kotlin and the OpenAI API. Users will first input short notes on the main screen. It automatically categorizes and stores notes for you, allowing you to efficiently manage and query your notes for better contextual answers. The app also provides functionality to delete notes as needed.
 
 ## Features
 
