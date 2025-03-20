@@ -17,7 +17,7 @@ OpenNotes is an AI-powered note-taking application built with Kotlin and the Ope
    cd OpenNotes
    ```
 2. Open the project in Android Studio.
-3. Configure your OpenAI API key in the environment or app settings.
+3. Configure your OpenAI API key by exporting OPENAI_KEY variable in environment (see build.gradle).
 4. Build and run the project on an emulator or physical device.
 
 ## Device & SDK Requirements
